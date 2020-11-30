@@ -33,7 +33,8 @@ public class TemplateMatcher {
         Imgproc.matchTemplate(rgb, template, result, Imgproc.TM_CCORR_NORMED, mask);
         Core.normalize(result, result, 0, 1, Core.NORM_MINMAX, -1, new Mat());
         Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
-        var acceptable = mmr.maxVal > minMatchQuality;
-        return acceptable ? mmr.maxLoc : null;
+        //var acceptable = mmr.maxVal > minMatchQuality;
+        //return acceptable ? mmr.maxLoc : null;
+        return mmr.maxLoc;
     }
 }

@@ -32,8 +32,6 @@ public class Capture {
         if (!videoCapture.isOpened()) {
             return null;
         }
-        var start = System.nanoTime();
-        // init everything
         Mat frame = new Mat();
         try {
             // read the current frame
@@ -47,7 +45,6 @@ public class Capture {
             // log the error
             System.err.println("Exception during the image elaboration: " + e);
         }
-        //System.out.println("grabFrame: " + TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS));
         return frame;
     }
 

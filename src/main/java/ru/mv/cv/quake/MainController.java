@@ -11,11 +11,10 @@ import ru.mv.cv.quake.capture.Capture;
 import ru.mv.cv.quake.capture.CaptureProcessor;
 import ru.mv.cv.quake.image.ImageConverter;
 
-import java.util.Queue;
-import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class MainController {
 
@@ -34,13 +33,13 @@ public class MainController {
 
     public MainController() {
         capture = new Capture();
-        Queue<Mat> renderQueue = new ConcurrentLinkedQueue<>();
+        AtomicReference<Mat> renderReference = new AtomicReference<>();
         ImageConverter imageConverter = new ImageConverter();
-        captureProcessor = new CaptureProcessor(capture, renderQueue, renderCoolDown);
+        captureProcessor = new CaptureProcessor(capture, renderReference, renderCoolDown);
         renderExecutor = Executors.newSingleThreadScheduledExecutor();
         renderExecutor.scheduleAtFixedRate(() -> {
             try {
-                var mat = renderQueue.poll();
+                var mat = renderReference.get();
                 if (mat == null) {
                     return;
                 }

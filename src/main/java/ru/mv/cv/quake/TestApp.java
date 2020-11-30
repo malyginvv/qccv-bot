@@ -1,7 +1,9 @@
 package ru.mv.cv.quake;
 
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import nu.pattern.OpenCV;
@@ -18,9 +20,16 @@ public class TestApp extends Application {
     @Override
     public void start(Stage primaryStage) throws IOException {
         var fxmlLoader = new FXMLLoader(TestApp.class.getResource("sample.fxml"));
-        var scene = new Scene(fxmlLoader.load());
+        Parent parent = fxmlLoader.load();
+        MainController controller = fxmlLoader.getController();
+
+        var scene = new Scene(parent);
         primaryStage.setTitle("Hello World");
         primaryStage.setScene(scene);
+        primaryStage.setOnHidden(windowEvent -> {
+            controller.shutdown();
+            Platform.exit();
+        });
         primaryStage.show();
     }
 }

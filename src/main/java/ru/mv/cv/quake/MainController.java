@@ -7,31 +7,50 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import org.opencv.core.Mat;
-import org.opencv.core.MatOfByte;
-import org.opencv.imgcodecs.Imgcodecs;
-import org.opencv.imgproc.Imgproc;
-import org.opencv.videoio.VideoCapture;
-import org.opencv.videoio.Videoio;
+import ru.mv.cv.quake.capture.Capture;
+import ru.mv.cv.quake.capture.CaptureProcessor;
+import ru.mv.cv.quake.image.ImageConverter;
 
-import java.io.ByteArrayInputStream;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class MainController {
 
-    private static final int FRAME_WIDTH = 1280;
-    private static final int FRAME_HEIGHT = 720;
-
     @FXML
     private Button startButton;
     @FXML
     private ImageView currentFrame;
 
-    private ScheduledExecutorService timer;
-    private final VideoCapture capture = new VideoCapture();
+    private ScheduledExecutorService captureExecutor;
+    private final Capture capture;
     private boolean cameraActive = false;
     private final int cameraId = 0;
+    private final int renderCoolDown = 100;
+    private final CaptureProcessor captureProcessor;
+    private final ScheduledExecutorService renderExecutor;
+
+    public MainController() {
+        capture = new Capture();
+        Queue<Mat> renderQueue = new ConcurrentLinkedQueue<>();
+        ImageConverter imageConverter = new ImageConverter();
+        captureProcessor = new CaptureProcessor(capture, renderQueue, renderCoolDown);
+        renderExecutor = Executors.newSingleThreadScheduledExecutor();
+        renderExecutor.scheduleAtFixedRate(() -> {
+            try {
+                var mat = renderQueue.poll();
+                if (mat == null) {
+                    return;
+                }
+                var image = imageConverter.convert(mat);
+                updateImageView(currentFrame, image);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, 0, renderCoolDown, TimeUnit.MILLISECONDS);
+    }
 
     @FXML
     protected void startCamera(ActionEvent event) {
@@ -42,23 +61,11 @@ public class MainController {
             return;
         }
 
-        capture.open(cameraId);
-        capture.set(Videoio.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-        capture.set(Videoio.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
-        if (this.capture.isOpened()) {
+        if (capture.open(cameraId)) {
             this.cameraActive = true;
 
-            // grab a frame every 33 ms (30 frames/sec)
-            Runnable frameGrabber = () -> {
-                // effectively grab and process a single frame
-                Mat frame = grabFrame();
-                // convert and show the frame
-                Image imageToShow = toImage(frame);
-                updateImageView(currentFrame, imageToShow);
-            };
-
-            timer = Executors.newSingleThreadScheduledExecutor();
-            timer.scheduleAtFixedRate(frameGrabber, 0, 33, TimeUnit.MILLISECONDS);
+            captureExecutor = Executors.newSingleThreadScheduledExecutor();
+            captureExecutor.scheduleAtFixedRate(captureProcessor::processMatcher, 0, 16, TimeUnit.MILLISECONDS);
 
             // update the button content
             startButton.setText("Stop Camera");
@@ -68,64 +75,22 @@ public class MainController {
         }
     }
 
-    private Image toImage(Mat frame) {
-        var start = System.nanoTime();
-        MatOfByte buffer = new MatOfByte();
-        Imgcodecs.imencode(".png", frame, buffer);
-        var result = new Image(new ByteArrayInputStream(buffer.toArray()));
-        var end = System.nanoTime();
-        System.out.println("toImage: " + TimeUnit.MILLISECONDS.convert(end - start, TimeUnit.NANOSECONDS));
-        return result;
-    }
-
-    /**
-     * Get a frame from the opened video stream (if any)
-     *
-     * @return the {@link Mat} to show
-     */
-    private Mat grabFrame() {
-        var start = System.nanoTime();
-        // init everything
-        Mat frame = new Mat();
-        // check if the capture is open
-        if (this.capture.isOpened()) {
-            try {
-                // read the current frame
-                Mat currentFrame = new Mat();
-                this.capture.read(currentFrame);
-                // if the frame is not empty, process it
-                if (!currentFrame.empty()) {
-                    Imgproc.cvtColor(currentFrame, frame, Imgproc.COLOR_BGR2BGRA);
-                    //Imgproc.cvtColor(currentFrame, frame, Imgproc.COLOR_BGR2GRAY);
-                }
-            } catch (Exception e) {
-                // log the error
-                System.err.println("Exception during the image elaboration: " + e);
-            }
-        }
-        System.out.println("grabFrame: " + TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS));
-        return frame;
-    }
-
     /**
      * Stop the acquisition from the camera and release all the resources
      */
     private void stopAcquisition() {
-        if (!timer.isShutdown()) {
+        if (captureExecutor != null && !captureExecutor.isShutdown()) {
             try {
                 // stop the timer
-                timer.shutdown();
-                timer.awaitTermination(33, TimeUnit.MILLISECONDS);
+                captureExecutor.shutdown();
+                captureExecutor.awaitTermination(33, TimeUnit.MILLISECONDS);
             } catch (InterruptedException e) {
                 // log any exception
                 System.err.println("Exception in stopping the frame capture, trying to release the camera now... " + e);
             }
         }
 
-        if (capture.isOpened()) {
-            // release the camera
-            capture.release();
-        }
+        capture.release();
     }
 
     /**
@@ -141,7 +106,8 @@ public class MainController {
     /**
      * On application close, stop the acquisition from the camera
      */
-    protected void setClosed() {
+    public void shutdown() {
         this.stopAcquisition();
+        renderExecutor.shutdown();
     }
 }

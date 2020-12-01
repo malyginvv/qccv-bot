@@ -1,7 +1,8 @@
 package ru.mv.cv.quake.capture;
 
-import org.opencv.core.*;
-import org.opencv.imgproc.Imgproc;
+import org.opencv.core.Mat;
+import org.opencv.core.Point;
+import ru.mv.cv.quake.image.PointRenderer;
 import ru.mv.cv.quake.image.TemplateMatcher;
 
 import java.util.concurrent.ForkJoinPool;
@@ -14,14 +15,14 @@ public class CaptureProcessor {
     private final int renderCoolDown;
     private long lastRender;
     private final TemplateMatcher templateMatcher;
-    private final Scalar boxColor;
+    private final PointRenderer pointRenderer;
 
     public CaptureProcessor(Capture capture, AtomicReference<Mat> renderReference, int renderCoolDown) {
         this.capture = capture;
         this.renderReference = renderReference;
         this.renderCoolDown = renderCoolDown;
         this.templateMatcher = new TemplateMatcher();
-        boxColor = new Scalar(25, 25, 255, 255);
+        this.pointRenderer = new PointRenderer();
     }
 
     public void processMatcher() {
@@ -34,9 +35,9 @@ public class CaptureProcessor {
             Point match = templateMatcher.findMatch(frame);
             if (needsRender()) {
                 ForkJoinPool.commonPool().execute(() -> {
-                    var frameToRender = frame.clone();
+                    var frameToRender = frame;
                     if (match != null && match.x > 50 && match.x < 670 && match.y > 50 && match.y < 1230) {
-                        Imgproc.rectangle(frameToRender, match, new Point(match.x + 16, match.y + 16), boxColor, 2);
+                        frameToRender = pointRenderer.render(frame, match);
                     }
                     renderReference.set(frameToRender);
                     lastRender = System.nanoTime() / 1_000_000;

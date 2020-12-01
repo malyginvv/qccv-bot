@@ -5,7 +5,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<GridPane alignment="center" hgap="10" vgap="10" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.mv.cv.quake.MainController">
+<GridPane alignment="center" hgap="10" prefWidth="1300.0" vgap="10" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.mv.cv.quake.MainController">
    <columnConstraints>
       <ColumnConstraints />
    </columnConstraints>
@@ -13,7 +13,7 @@
       <RowConstraints />
    </rowConstraints>
    <children>
-      <BorderPane prefHeight="200.0" prefWidth="200.0">
+      <BorderPane prefHeight="200.0" prefWidth="1280.0">
          <bottom>
             <Button fx:id="startButton" mnemonicParsing="false" onAction="#startCamera" text="Start stream" BorderPane.alignment="CENTER">
                <BorderPane.margin>
@@ -27,6 +27,12 @@
                </BorderPane.margin>
             </ImageView>
          </center>
+         <top>
+            <Button fx:id="loadImageButton" mnemonicParsing="false" onAction="#loadImage" text="Load image" BorderPane.alignment="CENTER">
+               <BorderPane.margin>
+                  <Insets top="4.0" />
+               </BorderPane.margin></Button>
+         </top>
       </BorderPane>
    </children>
 </GridPane>

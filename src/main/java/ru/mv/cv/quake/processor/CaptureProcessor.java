@@ -1,7 +1,8 @@
-package ru.mv.cv.quake.capture;
+package ru.mv.cv.quake.processor;
 
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import ru.mv.cv.quake.capture.Capture;
 import ru.mv.cv.quake.image.PointRenderer;
 import ru.mv.cv.quake.image.TemplateMatcher;
 

@@ -19,7 +19,7 @@ public class TestApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        var fxmlLoader = new FXMLLoader(TestApp.class.getResource("sample.fxml"));
+        var fxmlLoader = new FXMLLoader(TestApp.class.getResource("main.fxml"));
         Parent parent = fxmlLoader.load();
         MainController controller = fxmlLoader.getController();
 
@@ -30,6 +30,7 @@ public class TestApp extends Application {
             controller.shutdown();
             Platform.exit();
         });
+        controller.setStage(primaryStage);
         primaryStage.show();
     }
 }

@@ -6,10 +6,14 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.stage.FileChooser;
+import javafx.stage.Stage;
 import org.opencv.core.Mat;
 import ru.mv.cv.quake.capture.Capture;
-import ru.mv.cv.quake.capture.CaptureProcessor;
+import ru.mv.cv.quake.image.ImageLoader;
+import ru.mv.cv.quake.processor.CaptureProcessor;
 import ru.mv.cv.quake.image.ImageConverter;
+import ru.mv.cv.quake.processor.ImageProcessor;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -21,7 +25,11 @@ public class MainController {
     @FXML
     private Button startButton;
     @FXML
+    private Button loadImageButton;
+    @FXML
     private ImageView currentFrame;
+
+    private Stage stage;
 
     private ScheduledExecutorService captureExecutor;
     private final Capture capture;
@@ -30,11 +38,16 @@ public class MainController {
     private final int renderCoolDown = 100;
     private final CaptureProcessor captureProcessor;
     private final ScheduledExecutorService renderExecutor;
+    private final ImageConverter imageConverter;
+    private final ImageProcessor imageProcessor;
+    private final ImageLoader imageLoader;
 
     public MainController() {
         capture = new Capture();
         AtomicReference<Mat> renderReference = new AtomicReference<>();
-        ImageConverter imageConverter = new ImageConverter();
+        imageConverter = new ImageConverter();
+        imageProcessor = new ImageProcessor();
+        imageLoader = new ImageLoader();
         captureProcessor = new CaptureProcessor(capture, renderReference, renderCoolDown);
         renderExecutor = Executors.newSingleThreadScheduledExecutor();
         renderExecutor.scheduleAtFixedRate(() -> {
@@ -56,6 +69,7 @@ public class MainController {
         if (cameraActive) {
             cameraActive = false;
             startButton.setText("Start Camera");
+            loadImageButton.setDisable(false);
             stopAcquisition();
             return;
         }
@@ -68,6 +82,7 @@ public class MainController {
 
             // update the button content
             startButton.setText("Stop Camera");
+            loadImageButton.setDisable(true);
         } else {
             // log the error
             System.err.println("Impossible to open the camera connection...");
@@ -92,6 +107,20 @@ public class MainController {
         capture.release();
     }
 
+    @FXML
+    public void loadImage(ActionEvent event) {
+        var fileChooser = new FileChooser();
+        fileChooser.setTitle("Select a screen from Quake Champions");
+        fileChooser.setSelectedExtensionFilter(new FileChooser.ExtensionFilter("image files", "jpg", "png"));
+        var file = fileChooser.showOpenDialog(stage);
+        if (file != null) {
+            var mat = imageLoader.loadImage(file);
+            var processed = imageProcessor.process(mat);
+            var image = imageConverter.convert(processed);
+            updateImageView(currentFrame, image);
+        }
+    }
+
     /**
      * Update the {@link ImageView} in the JavaFX main thread
      *
@@ -100,6 +129,10 @@ public class MainController {
      */
     private void updateImageView(ImageView view, Image image) {
         Platform.runLater(() -> view.setImage(image));
+    }
+
+    public void setStage(Stage stage) {
+        this.stage = stage;
     }
 
     /**

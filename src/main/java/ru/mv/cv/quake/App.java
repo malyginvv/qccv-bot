@@ -7,10 +7,15 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import nu.pattern.OpenCV;
+import ru.mv.cv.quake.controller.StageAndShutdownAware;
 
 import java.io.IOException;
 
-public class TestApp extends Application {
+public class App extends Application {
+
+    private static final String MODE_PARAM_NAME = "mode";
+    private static final String MODE_STREAM = "viewer";
+    private static final String MODE_VIEWER = "viewer";
 
     public static void main(String[] args) {
         OpenCV.loadLocally();
@@ -19,12 +24,20 @@ public class TestApp extends Application {
 
     @Override
     public void start(Stage primaryStage) throws IOException {
-        var fxmlLoader = new FXMLLoader(TestApp.class.getResource("main.fxml"));
+        var mode = System.getProperty(MODE_PARAM_NAME, MODE_STREAM);
+        String fxml;
+        if (mode.equals(MODE_VIEWER)) {
+            fxml = "image-viewer.fxml";
+        } else {
+            fxml = "main.fxml";
+        }
+
+        var fxmlLoader = new FXMLLoader(App.class.getResource(fxml));
         Parent parent = fxmlLoader.load();
-        MainController controller = fxmlLoader.getController();
+        StageAndShutdownAware controller = fxmlLoader.getController();
 
         var scene = new Scene(parent);
-        primaryStage.setTitle("Hello World");
+        primaryStage.setTitle("Quake Champions Computer Vision Project");
         primaryStage.setScene(scene);
         primaryStage.setOnHidden(windowEvent -> {
             controller.shutdown();

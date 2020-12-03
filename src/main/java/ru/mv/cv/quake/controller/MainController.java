@@ -1,4 +1,4 @@
-package ru.mv.cv.quake;
+package ru.mv.cv.quake.controller;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -7,12 +7,11 @@ import javafx.scene.control.Button;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.FileChooser;
-import javafx.stage.Stage;
 import org.opencv.core.Mat;
 import ru.mv.cv.quake.capture.Capture;
+import ru.mv.cv.quake.image.ImageConverter;
 import ru.mv.cv.quake.image.ImageLoader;
 import ru.mv.cv.quake.processor.CaptureProcessor;
-import ru.mv.cv.quake.image.ImageConverter;
 import ru.mv.cv.quake.processor.ImageProcessor;
 
 import java.util.concurrent.Executors;
@@ -20,7 +19,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class MainController {
+public class MainController extends AbstractController {
 
     @FXML
     private Button startButton;
@@ -28,8 +27,6 @@ public class MainController {
     private Button loadImageButton;
     @FXML
     private ImageView currentFrame;
-
-    private Stage stage;
 
     private ScheduledExecutorService captureExecutor;
     private final Capture capture;
@@ -131,13 +128,7 @@ public class MainController {
         Platform.runLater(() -> view.setImage(image));
     }
 
-    public void setStage(Stage stage) {
-        this.stage = stage;
-    }
-
-    /**
-     * On application close, stop the acquisition from the camera
-     */
+    @Override
     public void shutdown() {
         this.stopAcquisition();
         renderExecutor.shutdown();

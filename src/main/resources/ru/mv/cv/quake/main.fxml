@@ -5,7 +5,7 @@
 <?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
-<GridPane alignment="center" hgap="10" prefWidth="1300.0" vgap="10" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.mv.cv.quake.MainController">
+<GridPane alignment="center" hgap="10" prefWidth="1300.0" vgap="10" xmlns="http://javafx.com/javafx/11.0.1" xmlns:fx="http://javafx.com/fxml/1" fx:controller="ru.mv.cv.quake.controller.MainController">
    <columnConstraints>
       <ColumnConstraints />
    </columnConstraints>

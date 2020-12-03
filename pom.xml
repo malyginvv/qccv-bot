@@ -58,7 +58,7 @@
                     <source>14</source>
                     <target>14</target>
                     <release>14</release>
-                    <mainClass>ru.mv.cv.quake.TestApp</mainClass>
+                    <mainClass>ru.mv.cv.quake.App</mainClass>
                 </configuration>
             </plugin>
         </plugins>

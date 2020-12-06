@@ -17,8 +17,7 @@ public class TemplateMatcher {
         try {
             template = Imgcodecs.imread("H:\\workspace\\cv-quake\\src\\main\\resources\\pointer.png", Imgcodecs.IMREAD_COLOR);
             mask = Imgcodecs.imread("H:\\workspace\\cv-quake\\src\\main\\resources\\mask.png", Imgcodecs.IMREAD_COLOR);
-            minMatchQuality = 0.75;
-            System.out.println("TemplateMatcher");
+            minMatchQuality = 0.9;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -31,10 +30,13 @@ public class TemplateMatcher {
         Mat rgb = new Mat();
         Imgproc.cvtColor(frame, rgb, Imgproc.COLOR_BGRA2RGB);
         Imgproc.matchTemplate(rgb, template, result, Imgproc.TM_CCORR_NORMED, mask);
-        Core.normalize(result, result, 0, 1, Core.NORM_MINMAX, -1, new Mat());
+        //Core.normalize(result, result, 0, 1, Core.NORM_MINMAX, -1, new Mat());
         Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
-        //var acceptable = mmr.maxVal > minMatchQuality;
-        //return acceptable ? mmr.maxLoc : null;
-        return mmr.maxLoc;
+        var acceptable = mmr.maxVal > minMatchQuality;
+        return acceptable ? mmr.maxLoc : null;
+    }
+
+    public void setMinMatchQuality(double minMatchQuality) {
+        this.minMatchQuality = minMatchQuality;
     }
 }

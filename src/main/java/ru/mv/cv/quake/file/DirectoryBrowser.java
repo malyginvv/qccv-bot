@@ -15,7 +15,7 @@ public class DirectoryBrowser {
         if (files == null) {
             files = new File[0];
         }
-        currentFileIndex = files.length - 1;
+        currentFileIndex = files.length > 0 ? 0 : -1;
     }
 
     public boolean hasNext() {

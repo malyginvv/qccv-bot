@@ -4,6 +4,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.DirectoryChooser;
@@ -27,6 +28,10 @@ public class ImageViewerController extends AbstractController {
     public Button backButton;
     @FXML
     public Button nextButton;
+    @FXML
+    public Slider minQualitySlider;
+    @FXML
+    public Label minQualityLabel;
 
     private final DirectoryBrowser directoryBrowser = new DirectoryBrowser();
     private final ImageLoader imageLoader = new ImageLoader();
@@ -36,6 +41,15 @@ public class ImageViewerController extends AbstractController {
     private Mat currentMat;
     private Mat currentProcessed;
     private Image currentImage;
+
+    @FXML
+    public void initialize() {
+        minQualitySlider.valueProperty().addListener((observableValue, oldValue, newValue) -> {
+            imageProcessor.setMatchQuality(newValue.doubleValue() / 100);
+            minQualityLabel.setText(Double.toString(newValue.intValue()));
+            processAndUpdateImage();
+        });
+    }
 
     @FXML
     public void openDir(ActionEvent event) {
@@ -70,10 +84,14 @@ public class ImageViewerController extends AbstractController {
     private void updateMatsAndButtons() {
         fileLabel.setText(current.getAbsolutePath());
         currentMat = imageLoader.loadImage(current);
+        processAndUpdateImage();
+        updateButtonStates();
+    }
+
+    private void processAndUpdateImage() {
         currentProcessed = imageProcessor.process(currentMat);
         currentImage = imageConverter.convert(currentProcessed);
         imageView.setImage(currentImage);
-        updateButtonStates();
     }
 
     private void updateButtonStates() {

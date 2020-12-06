@@ -18,4 +18,8 @@ public class ImageProcessor {
         var match = templateMatcher.findMatch(frame);
         return match != null ? pointRenderer.render(frame, match) : frame;
     }
+
+    public void setMatchQuality(double matchQuality) {
+        templateMatcher.setMinMatchQuality(matchQuality);
+    }
 }

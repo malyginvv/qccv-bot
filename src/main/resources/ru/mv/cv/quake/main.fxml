@@ -27,12 +27,6 @@
                </BorderPane.margin>
             </ImageView>
          </center>
-         <top>
-            <Button fx:id="loadImageButton" mnemonicParsing="false" onAction="#loadImage" text="Load image" BorderPane.alignment="CENTER">
-               <BorderPane.margin>
-                  <Insets top="4.0" />
-               </BorderPane.margin></Button>
-         </top>
       </BorderPane>
    </children>
 </GridPane>

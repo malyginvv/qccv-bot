@@ -7,6 +7,8 @@ import org.opencv.core.Point;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
+import java.util.concurrent.TimeUnit;
+
 public class TemplateMatcher {
 
     private Mat template;
@@ -24,6 +26,7 @@ public class TemplateMatcher {
     }
 
     public Point findMatch(Mat frame) {
+        var start = System.nanoTime();
         int resultCols = frame.cols() - template.cols() + 1;
         int resultRows = frame.rows() - template.rows() + 1;
         Mat result = new Mat(resultRows, resultCols, CvType.CV_32FC1);
@@ -33,6 +36,7 @@ public class TemplateMatcher {
         //Core.normalize(result, result, 0, 1, Core.NORM_MINMAX, -1, new Mat());
         Core.MinMaxLocResult mmr = Core.minMaxLoc(result);
         var acceptable = mmr.maxVal > minMatchQuality;
+        System.out.println("findMatch: " + TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS));
         return acceptable ? mmr.maxLoc : null;
     }
 

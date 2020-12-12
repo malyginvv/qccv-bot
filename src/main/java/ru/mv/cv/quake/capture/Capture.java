@@ -7,8 +7,8 @@ import org.opencv.videoio.Videoio;
 
 public class Capture {
 
-    private static final int FRAME_WIDTH = 1280;
-    private static final int FRAME_HEIGHT = 720;
+    public static final int FRAME_WIDTH = 1280;
+    public static final int FRAME_HEIGHT = 720;
 
     private final VideoCapture videoCapture;
 
@@ -36,14 +36,14 @@ public class Capture {
         try {
             // read the current frame
             Mat currentFrame = new Mat();
-            this.videoCapture.read(currentFrame);
+            videoCapture.read(currentFrame);
             // if the frame is not empty, process it
             if (!currentFrame.empty()) {
                 Imgproc.cvtColor(currentFrame, frame, Imgproc.COLOR_BGR2BGRA);
             }
         } catch (Exception e) {
             // log the error
-            System.err.println("Exception during the image elaboration: " + e);
+            System.out.println("Exception during the image elaboration: " + e);
         }
         return frame;
     }

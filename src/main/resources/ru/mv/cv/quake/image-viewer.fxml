@@ -43,6 +43,7 @@
             <Label layoutX="14.0" layoutY="6.0" text="Min match quality: " AnchorPane.bottomAnchor="7.0" AnchorPane.leftAnchor="14.0" AnchorPane.topAnchor="6.0" />
             <Slider fx:id="minQualitySlider" layoutX="156.0" layoutY="7.0" min="10.0" prefHeight="14.0" prefWidth="345.0" value="95.0" />
             <Label fx:id="minQualityLabel" layoutX="116.0" layoutY="8.0" prefWidth="40.0" AnchorPane.bottomAnchor="7.0" AnchorPane.topAnchor="6.0" />
+            <Label fx:id="imageInfoLabel" layoutX="887.0" layoutY="6.0" prefHeight="17.0" prefWidth="379.0" text="Click on image for info" />
          </children>
       </AnchorPane>
    </children>

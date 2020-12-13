@@ -1,5 +1,6 @@
 package ru.mv.cv.quake.controller;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
@@ -7,6 +8,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.Slider;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.input.MouseEvent;
 import javafx.stage.DirectoryChooser;
 import org.opencv.core.Mat;
 import ru.mv.cv.quake.file.DirectoryBrowser;
@@ -15,6 +17,7 @@ import ru.mv.cv.quake.image.ImageLoader;
 import ru.mv.cv.quake.processor.ImageProcessor;
 
 import java.io.File;
+import java.util.Arrays;
 
 public class ImageViewerController extends AbstractController {
 
@@ -32,6 +35,8 @@ public class ImageViewerController extends AbstractController {
     public Slider minQualitySlider;
     @FXML
     public Label minQualityLabel;
+    @FXML
+    public Label imageInfoLabel;
 
     private final DirectoryBrowser directoryBrowser = new DirectoryBrowser();
     private final ImageLoader imageLoader = new ImageLoader();
@@ -49,12 +54,14 @@ public class ImageViewerController extends AbstractController {
             minQualityLabel.setText(Double.toString(newValue.intValue()));
             processAndUpdateImage();
         });
+        imageView.setOnMouseClicked(this::onMouseClick);
     }
 
     @FXML
     public void openDir(ActionEvent event) {
         var directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("Select a directory with Quake Champions screenshots");
+        directoryChooser.setInitialDirectory(new File("H:\\workspace\\cv-quake-img\\training\\positive\\img"));
         var file = directoryChooser.showDialog(stage);
         if (file != null) {
             directoryBrowser.openDirectory(file);
@@ -74,6 +81,14 @@ public class ImageViewerController extends AbstractController {
     public void onPrevious(ActionEvent event) {
         current = directoryBrowser.previous();
         updateMatsAndButtons();
+    }
+
+    public void onMouseClick(MouseEvent event) {
+        Platform.runLater(() -> {
+            var pixelData = imageProcessor.getPixelData(currentMat, (int) event.getX(), (int) event.getY());
+            imageInfoLabel.setText("RGB: " + Arrays.toString(pixelData.getRgb())
+                    + " HSV: " + Arrays.toString(pixelData.getHsv()));
+        });
     }
 
     private void nextFile() {

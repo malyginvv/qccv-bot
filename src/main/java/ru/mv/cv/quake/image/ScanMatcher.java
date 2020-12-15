@@ -3,9 +3,12 @@ package ru.mv.cv.quake.image;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
 import ru.mv.cv.quake.capture.Capture;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.TimeUnit;
 
 public class ScanMatcher {
@@ -31,7 +34,13 @@ public class ScanMatcher {
     private static final int ROW_INCREMENT = 3;
     private static final int COL_INCREMENT = 3;
 
-    public Point findEnemy(Mat frame) {
+    private final TemplateMatcher templateMatcher;
+
+    public ScanMatcher() {
+        templateMatcher = new TemplateMatcher();
+    }
+
+    public Point findTargets(Mat frame) {
         var start = System.nanoTime();
 
         Mat rgb = new Mat();
@@ -42,47 +51,39 @@ public class ScanMatcher {
         var rows = Math.min(hsv.rows(), END_ROW);
         var type = hsv.type();
         var channels = new byte[CvType.channels(type)];
-        int rowMatch = -1;
-        int totalMatches = 0;
         int x = START_COL;
+        Collection<Point> points = new ArrayList<>();
         Point point = null;
         while (x < cols) {
-            int consecutiveMatches = 0;
-            // start from starting row or from previous matching row if it's higher
-            int startRow = Math.max(START_ROW, rowMatch - ROW_INCREMENT * (CONSECUTIVE_MATCH_COUNT - 1));
-            for (int y = startRow; y < rows; y += ROW_INCREMENT) {
+            for (int y = START_ROW; y < rows; y += ROW_INCREMENT) {
                 hsv.get(y, x, channels);
                 var h = channels[0] & BYTE_CONVERTER;
                 int hue = h * 2;
                 int saturation = channels[1] & BYTE_CONVERTER;
                 if (hue >= MIN_HUE && hue <= MAX_HUE && saturation >= MIN_SATURATION) {
-                    consecutiveMatches++;
-                } else {
-                    consecutiveMatches = consecutiveMatches > 0 ? consecutiveMatches - 1 : 0;
+                     point = findMatch(rgb, y, x);
+                    if (point != null) {
+                        break;
+                    }
                 }
-                if (consecutiveMatches == CONSECUTIVE_MATCH_COUNT) {
-                    // n consecutive matches - there is a candidate for a total match
-                    rowMatch = y;
-                    break;
-                }
-                //System.out.println(i + " " + Arrays.toString(channels));
             }
-            if (rowMatch > 0) {
-                // found a match - now we need to check the next column
-                totalMatches++;
-                x++;
-            } else {
-                // no match - can skip a couple of columns
-                x += COL_INCREMENT;
-                totalMatches = totalMatches > 0 ? totalMatches - 1 : 0;
-            }
-            if (totalMatches == TOTAL_MATCH_COUNT) {
-                point = new Point(x, rowMatch);
+            if (point != null) {
                 break;
             }
+            x += COL_INCREMENT;
         }
 
         System.out.println("ScanMatcher: " + TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS));
         return point;
+    }
+
+    private Point findMatch(Mat rgb, int row, int col) {
+        var roi = new Rect(col - 16, row - 16, 32, 32);
+        var region = new Mat(rgb, roi);
+        var match = templateMatcher.findMatch(region);
+        if (match != null) {
+            return new Point(match.x + col - 16, match.y + row - 16);
+        }
+        return null;
     }
 }

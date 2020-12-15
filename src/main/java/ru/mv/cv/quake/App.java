@@ -14,7 +14,7 @@ import java.io.IOException;
 public class App extends Application {
 
     private static final String MODE_PARAM_NAME = "mode";
-    private static final String MODE_STREAM = "viewer";
+    private static final String MODE_STREAM = "stream";
     private static final String MODE_VIEWER = "viewer";
 
     public static void main(String[] args) {

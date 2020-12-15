@@ -21,7 +21,7 @@ public class ImageProcessor {
 
     public Mat process(Mat frame) {
         //var match = templateMatcher.findMatch(frame);
-        var match = scanMatcher.findEnemy(frame);
+        var match = scanMatcher.findTargets(frame);
         return match != null ? pointRenderer.render(frame, match) : frame;
     }
 

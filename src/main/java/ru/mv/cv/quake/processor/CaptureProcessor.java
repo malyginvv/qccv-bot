@@ -6,7 +6,7 @@ import org.opencv.core.Rect;
 import ru.mv.cv.quake.capture.Capture;
 import ru.mv.cv.quake.image.ImageLogger;
 import ru.mv.cv.quake.image.PointRenderer;
-import ru.mv.cv.quake.image.TemplateMatcher;
+import ru.mv.cv.quake.image.ScanMatcher;
 
 import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
@@ -16,8 +16,8 @@ public class CaptureProcessor {
 
     private static final int TRIGGER_BOX_WIDTH = 10;
     private static final int TRIGGER_BOX_HEIGHT = 20;
-    private static final int TRIGGER_BOX_Y_OFFSET = 25;
-    private static final int MAX_MOUSE_MOVEMENT = 700;
+    private static final int TRIGGER_BOX_Y_OFFSET = 40;
+    private static final int MAX_MOUSE_MOVEMENT = 30;
     private static final int MOUSE_RANDOM_RANGE = 3;
     private static final int MOUSE_MIN_RANDOM_VALUE = -MOUSE_RANDOM_RANGE / 2;
     private static final int SCREEN_CENTER_X = Capture.FRAME_WIDTH / 2;
@@ -27,7 +27,7 @@ public class CaptureProcessor {
     private final AtomicReference<Mat> renderReference;
     private final int renderCoolDown;
     private long lastRender;
-    private final TemplateMatcher templateMatcher;
+    private final ScanMatcher scanMatcher;
     private final PointRenderer pointRenderer;
     private final GameCommander gameCommander;
     private final Rect triggerBox;
@@ -38,7 +38,7 @@ public class CaptureProcessor {
         this.capture = capture;
         this.renderReference = renderReference;
         this.renderCoolDown = renderCoolDown;
-        this.templateMatcher = new TemplateMatcher();
+        this.scanMatcher = new ScanMatcher();
         this.pointRenderer = new PointRenderer();
         this.gameCommander = new GameCommander();
         this.triggerBox = new Rect(SCREEN_CENTER_X - TRIGGER_BOX_WIDTH / 2, SCREEN_CENTER_Y - TRIGGER_BOX_HEIGHT / 2,
@@ -54,7 +54,7 @@ public class CaptureProcessor {
         }
 
         try {
-            Point match = templateMatcher.findMatch(frame);
+            Point match = scanMatcher.findTargets(frame);
             if (match != null) {
                 Point roughEnemyPosition = new Point(match.x + 8, match.y + TRIGGER_BOX_Y_OFFSET);
                 if (roughEnemyPosition.inside(triggerBox)) {
@@ -64,7 +64,9 @@ public class CaptureProcessor {
                     // if enemy is not in the center, try to aim
                     double deltaX = roughEnemyPosition.x - SCREEN_CENTER_X;
                     double deltaY = roughEnemyPosition.y - SCREEN_CENTER_Y;
-                    gameCommander.moveCursor((int) deltaX, (int) deltaY);
+                    int moveX = Math.min((int) deltaX, MAX_MOUSE_MOVEMENT);
+                    int moveY = Math.min((int) deltaY, MAX_MOUSE_MOVEMENT);
+                    gameCommander.moveCursor(moveX, moveY);
                     //gameCommander.sendClick();
                 }
             }

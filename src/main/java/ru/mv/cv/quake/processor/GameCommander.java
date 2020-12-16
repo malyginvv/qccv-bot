@@ -10,7 +10,7 @@ import java.util.concurrent.ForkJoinPool;
 public class GameCommander {
 
     private static final String CLASS_NAME = "Lovecraft";
-    private static final String WINDOW_NAME = "Quake Champions CLIENT 0.1.DEV.43556/48148";
+    private static final String WINDOW_NAME = "Quake Champions CLIENT 0.1.DEV.51552/53841";
 
     private static final int MOUSEEVENTF_MOVE = 0x0001;
     private static final int MOUSEEVENTF_LEFTDOWN = 0x0002;

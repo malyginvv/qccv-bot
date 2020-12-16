@@ -8,6 +8,8 @@ import ru.mv.cv.quake.image.ImageLogger;
 import ru.mv.cv.quake.image.PointRenderer;
 import ru.mv.cv.quake.image.ScanMatcher;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicReference;
@@ -54,16 +56,35 @@ public class CaptureProcessor {
         }
 
         try {
-            Point match = scanMatcher.findTargets(frame);
-            if (match != null) {
-                Point roughEnemyPosition = new Point(match.x + 8, match.y + TRIGGER_BOX_Y_OFFSET);
-                if (roughEnemyPosition.inside(triggerBox)) {
+            Collection<Point> matches = scanMatcher.findTargets(frame);
+            if (!matches.isEmpty()) {
+                Collection<Point> roughEnemyPositions = new ArrayList<>();
+                boolean enemyInTriggerBox = false;
+                Point closestEnemy = null;
+                double minDistance = Integer.MAX_VALUE;
+                for (Point match : matches) {
+                    // calculate enemy position
+                    var roughEnemyPosition = new Point(match.x + 8, match.y + TRIGGER_BOX_Y_OFFSET);
+                    // add position to enemies collection
+                    roughEnemyPositions.add(roughEnemyPosition);
+                    // can fire?
+                    enemyInTriggerBox |= roughEnemyPosition.inside(triggerBox);
+                    // calculate distance to the center of the screen
+                    var dx = roughEnemyPosition.x - SCREEN_CENTER_X;
+                    var dy = roughEnemyPosition.y - SCREEN_CENTER_Y;
+                    double distanceToCenter = Math.sqrt(dx * dx + dy * dy);
+                    if (distanceToCenter < minDistance) {
+                        minDistance = distanceToCenter;
+                        closestEnemy = roughEnemyPosition;
+                    }
+                }
+                if (enemyInTriggerBox) {
                     // if enemy is somewhere near the screen center, fire
                     gameCommander.sendClick();
-                } else {
+                } else if (closestEnemy != null) {
                     // if enemy is not in the center, try to aim
-                    double deltaX = roughEnemyPosition.x - SCREEN_CENTER_X;
-                    double deltaY = roughEnemyPosition.y - SCREEN_CENTER_Y;
+                    double deltaX = closestEnemy.x - SCREEN_CENTER_X;
+                    double deltaY = closestEnemy.y - SCREEN_CENTER_Y;
                     int moveX = Math.min((int) deltaX, MAX_MOUSE_MOVEMENT);
                     int moveY = Math.min((int) deltaY, MAX_MOUSE_MOVEMENT);
                     gameCommander.moveCursor(moveX, moveY);
@@ -73,10 +94,8 @@ public class CaptureProcessor {
             if (needsRender()) {
                 ForkJoinPool.commonPool().execute(() -> {
                     var frameToRender = frame;
-                    if (match != null) {
-                        frameToRender = pointRenderer.render(frame, match);
-                        //imageLogger.logLater(new FrameData(frameToRender));
-                    }
+                    frameToRender = pointRenderer.render(frame, matches);
+                    //imageLogger.logLater(new FrameData(frameToRender));
                     renderReference.set(frameToRender);
                     lastRender = System.nanoTime() / 1_000_000;
                 });

@@ -40,7 +40,7 @@ public class ScanMatcher {
         templateMatcher = new TemplateMatcher();
     }
 
-    public Point findTargets(Mat frame) {
+    public Collection<Point> findTargets(Mat frame) {
         var start = System.nanoTime();
 
         Mat rgb = new Mat();
@@ -51,36 +51,46 @@ public class ScanMatcher {
         var rows = Math.min(hsv.rows(), END_ROW);
         var type = hsv.type();
         var channels = new byte[CvType.channels(type)];
-        int x = START_COL;
         Collection<Point> points = new ArrayList<>();
-        Point point = null;
-        while (x < cols) {
+        for (int x = START_COL; x < cols; x += COL_INCREMENT) {
+            Point point = null;
             for (int y = START_ROW; y < rows; y += ROW_INCREMENT) {
-                hsv.get(y, x, channels);
-                var h = channels[0] & BYTE_CONVERTER;
-                int hue = h * 2;
-                int saturation = channels[1] & BYTE_CONVERTER;
-                if (hue >= MIN_HUE && hue <= MAX_HUE && saturation >= MIN_SATURATION) {
-                     point = findMatch(rgb, y, x);
+                if (colorMatch(hsv, x, y, channels)) {
+                    point = findMatch(rgb, hsv, y, x, channels);
                     if (point != null) {
                         break;
                     }
                 }
             }
             if (point != null) {
-                break;
+                points.add(point);
             }
             x += COL_INCREMENT;
         }
 
         System.out.println("ScanMatcher: " + TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS));
-        return point;
+        return points;
     }
 
-    private Point findMatch(Mat rgb, int row, int col) {
-        var roi = new Rect(col - 16, row - 16, 32, 32);
-        var region = new Mat(rgb, roi);
-        var match = templateMatcher.findMatch(region);
+    private boolean colorMatch(Mat hsv, int x, int y, byte[] buffer) {
+        hsv.get(y, x, buffer);
+        var h = buffer[0] & BYTE_CONVERTER;
+        int hue = h * 2;
+        int saturation = buffer[1] & BYTE_CONVERTER;
+        return hue >= MIN_HUE && hue <= MAX_HUE && saturation >= MIN_SATURATION;
+    }
+
+    private Point findMatch(Mat rgb, Mat hsv, int row, int col, byte[] buffer) {
+        Point match = null;
+        // check two pixels to the right and two pixels diagonally right-down
+        if (colorMatch(hsv, col + 1, row, buffer)
+                && (colorMatch(hsv, col + 2, row, buffer) || colorMatch(hsv, col, row + 1, buffer))
+                && colorMatch(hsv, col + 1, row + 1, buffer)
+                && (colorMatch(hsv, col + 2, row + 2, buffer) || colorMatch(hsv, col + 1, row + 2, buffer))) {
+            var roi = new Rect(col - 16, row - 16, 32, 32);
+            var region = new Mat(rgb, roi);
+            match = templateMatcher.findMatch(region);
+        }
         if (match != null) {
             return new Point(match.x + col - 16, match.y + row - 16);
         }

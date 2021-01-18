@@ -7,6 +7,7 @@ import ru.mv.cv.quake.capture.Capture;
 import ru.mv.cv.quake.image.ImageLogger;
 import ru.mv.cv.quake.image.PointRenderer;
 import ru.mv.cv.quake.image.ScanMatcher;
+import ru.mv.cv.quake.model.EnemyData;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -18,7 +19,7 @@ public class CaptureProcessor {
 
     private static final int TRIGGER_BOX_WIDTH = 10;
     private static final int TRIGGER_BOX_HEIGHT = 20;
-    private static final int TRIGGER_BOX_Y_OFFSET = 40;
+    private static final int TRIGGER_BOX_Y_OFFSET = 20;
     private static final int MAX_MOUSE_MOVEMENT = 30;
     private static final int MOUSE_RANDOM_RANGE = 3;
     private static final int MOUSE_MIN_RANDOM_VALUE = -MOUSE_RANDOM_RANGE / 2;
@@ -56,15 +57,15 @@ public class CaptureProcessor {
         }
 
         try {
-            Collection<Point> matches = scanMatcher.findTargets(frame);
+            Collection<EnemyData> matches = scanMatcher.findTargets(frame);
             if (!matches.isEmpty()) {
                 Collection<Point> roughEnemyPositions = new ArrayList<>();
                 boolean enemyInTriggerBox = false;
                 Point closestEnemy = null;
                 double minDistance = Integer.MAX_VALUE;
-                for (Point match : matches) {
+                for (EnemyData match : matches) {
                     // calculate enemy position
-                    var roughEnemyPosition = new Point(match.x + 8, match.y + TRIGGER_BOX_Y_OFFSET);
+                    var roughEnemyPosition = new Point(match.indicatorTip.x + 8, match.indicatorTip.y + TRIGGER_BOX_Y_OFFSET);
                     // add position to enemies collection
                     roughEnemyPositions.add(roughEnemyPosition);
                     // can fire?

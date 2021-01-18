@@ -6,10 +6,12 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.imgproc.Imgproc;
 import ru.mv.cv.quake.capture.Capture;
+import ru.mv.cv.quake.model.EnemyData;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.concurrent.TimeUnit;
+import java.util.Queue;
 
 public class ScanMatcher {
 
@@ -25,22 +27,25 @@ public class ScanMatcher {
     private static final int TARGET_HUE_RANGE = 3;
     private static final int MIN_HUE = TARGET_HUE - TARGET_HUE_RANGE;
     private static final int MAX_HUE = TARGET_HUE + TARGET_HUE_RANGE;
-    private static final int TARGET_SATURATION = 240;
-    private static final int TARGET_SATURATION_RANGE = 15;
+    private static final int TARGET_SATURATION = 255;
+    private static final int TARGET_SATURATION_RANGE = 25;
     private static final int MIN_SATURATION = TARGET_SATURATION - TARGET_SATURATION_RANGE;
-    private static final int MAX_SATURATION = TARGET_SATURATION + TARGET_SATURATION_RANGE;
-    private static final int CONSECUTIVE_MATCH_COUNT = 3;
-    private static final int TOTAL_MATCH_COUNT = 2;
+    private static final int TARGET_VALUE = 255;
+    private static final int TARGET_VALUE_RANGE = 25;
+    private static final int MIN_VALUE = TARGET_VALUE - TARGET_VALUE_RANGE;
     private static final int ROW_INCREMENT = 3;
     private static final int COL_INCREMENT = 3;
+    private static final int ROW_SKIP_AFTER_MATCH = 100;
+    private static final int COL_SKIP_AFTER_MATCH = 40;
+    private static final int MAX_FLOOD_FILL_PIXELS = 40;
+    private static final int FLOOD_FILL_TRIGGER = 36;
+    private static final int MAX_FLOOD_FILL_OFFSET = 14;
+    private static final int MAX_DISTANCE_TO_OUTLINE = 35;
+    private static final int MAX_ENEMY_FLOOD_FILL_PIXELS = 120;
+    private static final int MAX_ENEMY_FLOOD_FILL_OFFSET = 40;
+    private static final int ENEMY_DEFAULT_HALF_WIDTH = 8;
 
-    private final TemplateMatcher templateMatcher;
-
-    public ScanMatcher() {
-        templateMatcher = new TemplateMatcher();
-    }
-
-    public Collection<Point> findTargets(Mat frame) {
+    public Collection<EnemyData> findTargets(Mat frame) {
         var start = System.nanoTime();
 
         Mat rgb = new Mat();
@@ -51,24 +56,27 @@ public class ScanMatcher {
         var rows = Math.min(hsv.rows(), END_ROW);
         var type = hsv.type();
         var channels = new byte[CvType.channels(type)];
-        Collection<Point> points = new ArrayList<>();
-        for (int x = START_COL; x < cols; x += COL_INCREMENT) {
-            Point point = null;
-            for (int y = START_ROW; y < rows; y += ROW_INCREMENT) {
+        Collection<EnemyData> points = new ArrayList<>();
+        int x = START_COL;
+        while (x < cols) {
+            EnemyData enemyData = null;
+            int y = START_ROW;
+            while (y < rows) {
                 if (colorMatch(hsv, x, y, channels)) {
-                    point = findMatch(rgb, hsv, y, x, channels);
-                    if (point != null) {
-                        break;
+                    enemyData = findMatch(hsv, y, x, channels);
+                    if (enemyData != null) {
+                        points.add(enemyData);
+                        y += ROW_SKIP_AFTER_MATCH;
                     }
                 }
+                y += ROW_INCREMENT;
             }
-            if (point != null) {
-                points.add(point);
+            if (enemyData != null) {
+                x += COL_SKIP_AFTER_MATCH;
             }
             x += COL_INCREMENT;
         }
 
-        System.out.println("ScanMatcher: " + TimeUnit.MILLISECONDS.convert(System.nanoTime() - start, TimeUnit.NANOSECONDS));
         return points;
     }
 
@@ -77,23 +85,114 @@ public class ScanMatcher {
         var h = buffer[0] & BYTE_CONVERTER;
         int hue = h * 2;
         int saturation = buffer[1] & BYTE_CONVERTER;
-        return hue >= MIN_HUE && hue <= MAX_HUE && saturation >= MIN_SATURATION;
+        int value = buffer[2] & BYTE_CONVERTER;
+        return hue >= MIN_HUE && hue <= MAX_HUE && saturation >= MIN_SATURATION && value >= MIN_VALUE;
     }
 
-    private Point findMatch(Mat rgb, Mat hsv, int row, int col, byte[] buffer) {
-        Point match = null;
-        // check two pixels to the right and two pixels diagonally right-down
-        if (colorMatch(hsv, col + 1, row, buffer)
-                && (colorMatch(hsv, col + 2, row, buffer) || colorMatch(hsv, col, row + 1, buffer))
-                && colorMatch(hsv, col + 1, row + 1, buffer)
-                && (colorMatch(hsv, col + 2, row + 2, buffer) || colorMatch(hsv, col + 1, row + 2, buffer))) {
-            var roi = new Rect(col - 16, row - 16, 32, 32);
-            var region = new Mat(rgb, roi);
-            match = templateMatcher.findMatch(region);
+    private EnemyData findMatch(Mat hsv, int row, int col, byte[] buffer) {
+        // try to step back
+        int x = col - 1;
+        while (x > col - COL_INCREMENT && colorMatch(hsv, x, row, buffer)) {
+            x--;
         }
-        if (match != null) {
-            return new Point(match.x + col - 16, match.y + row - 16);
+        int y = row - 1;
+        while (y > row - ROW_INCREMENT && colorMatch(hsv, x, y, buffer)) {
+            y--;
+        }
+        var tip = findTipUsingFloodFill(hsv, x, y, buffer);
+        if (tip != null) {
+            var enemyOutline = findEnemyOutline(hsv, tip, buffer);
+            return new EnemyData(tip, enemyOutline);
         }
         return null;
+    }
+
+    private Point findTipUsingFloodFill(Mat hsv, int fromX, int fromY, byte[] buffer) {
+        Queue<Point> points = new ArrayDeque<>(MAX_FLOOD_FILL_PIXELS);
+        points.offer(new Point(fromX + 1, fromY));
+        points.offer(new Point(fromX, fromY + 1));
+        points.offer(new Point(fromX + 1, fromY + 1));
+        int filled = 0;
+        int maxY = fromY;
+        int minX = fromX;
+        int maxX = fromX;
+        while (!points.isEmpty() && filled <= MAX_FLOOD_FILL_PIXELS) {
+            var point = points.poll();
+            if (colorMatch(hsv, (int) point.x, (int) point.y, buffer)) {
+                filled++;
+                maxY = Math.max(maxY, (int) point.y);
+                minX = Math.min(minX, (int) point.x);
+                maxX = Math.max(maxX, (int) point.x);
+                // try to flood only while moving forward
+                if (point.x < fromX + MAX_FLOOD_FILL_OFFSET) {
+                    points.offer(new Point(point.x + 1, point.y));
+                }
+                if (point.y < fromY + MAX_FLOOD_FILL_OFFSET) {
+                    points.offer(new Point(point.x, point.y + 1));
+                }
+            }
+        }
+        return filled > FLOOD_FILL_TRIGGER
+                ? new Point((minX + maxX) / 2.0, maxY)
+                : null;
+    }
+
+    private Rect findEnemyOutline(Mat hsv, Point start, byte[] buffer) {
+        int x = (int) start.x;
+        int y = (int) start.y;
+        var yLimit = start.y + MAX_DISTANCE_TO_OUTLINE;
+        // move down while color matches
+        while (y < yLimit && colorMatch(hsv, x, y, buffer)) {
+            y++;
+        }
+        if (y == yLimit) {
+            return new Rect(x - ENEMY_DEFAULT_HALF_WIDTH, (int) start.y, ENEMY_DEFAULT_HALF_WIDTH * 2, MAX_DISTANCE_TO_OUTLINE);
+        }
+        int colorEndY = y;
+        boolean hit = false;
+        // move down until we hit outline or travel farther than allowed
+        while (y < yLimit) {
+            if (colorMatch(hsv, x, y, buffer)) {
+                hit = true;
+                break;
+            }
+            y++;
+        }
+
+        if (hit) {
+            int filled = 0;
+            int fromY = y + 2;
+            int minY = y;
+            int maxY = y;
+            int minX = x;
+            int maxX = x;
+            // use flood fill to find outline
+            Queue<Point> points = new ArrayDeque<>(MAX_ENEMY_FLOOD_FILL_PIXELS);
+            points.add(new Point(x, y + 2));
+            while (!points.isEmpty() && filled <= MAX_ENEMY_FLOOD_FILL_PIXELS) {
+                var point = points.poll();
+                if (!colorMatch(hsv, (int) point.x, (int) point.y, buffer)) {
+                    filled++;
+                    minY = Math.min(minY, (int) point.y);
+                    maxY = Math.max(maxY, (int) point.y);
+                    minX = Math.min(minX, (int) point.x);
+                    maxX = Math.max(maxX, (int) point.x);
+                    if (point.x < start.x + MAX_ENEMY_FLOOD_FILL_OFFSET) {
+                        points.offer(new Point(point.x + 1, point.y));
+                    }
+                    if (point.x > start.x - MAX_ENEMY_FLOOD_FILL_OFFSET) {
+                        points.offer(new Point(point.x - 1, point.y));
+                    }
+                    if (point.y < fromY + MAX_ENEMY_FLOOD_FILL_OFFSET) {
+                        points.offer(new Point(point.x, point.y + 1));
+                    }
+                    if (point.y > fromY - MAX_ENEMY_FLOOD_FILL_OFFSET) {
+                        points.offer(new Point(point.x, point.y - 1));
+                    }
+                }
+            }
+            return new Rect(minX, minY, maxX - minX, maxY - minY);
+        }
+        return new Rect(x - ENEMY_DEFAULT_HALF_WIDTH, colorEndY, ENEMY_DEFAULT_HALF_WIDTH * 2, MAX_DISTANCE_TO_OUTLINE);
     }
 }

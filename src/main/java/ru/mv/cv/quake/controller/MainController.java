@@ -65,7 +65,7 @@ public class MainController extends AbstractController {
             this.cameraActive = true;
 
             captureExecutor = Executors.newSingleThreadScheduledExecutor();
-            captureExecutor.scheduleAtFixedRate(captureProcessor::processMatcher, 0, 16667, TimeUnit.MICROSECONDS);
+            captureExecutor.scheduleAtFixedRate(captureProcessor::processMatcher, 0, 10000, TimeUnit.MICROSECONDS);
 
             // update the button content
             startButton.setText("Stop Camera");

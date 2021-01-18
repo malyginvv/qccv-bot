@@ -15,6 +15,7 @@ public class GameCommander {
     private static final int MOUSEEVENTF_MOVE = 0x0001;
     private static final int MOUSEEVENTF_LEFTDOWN = 0x0002;
     private static final int MOUSEEVENTF_LEFTUP = 0x0004;
+    private static final float SPEED_DUMPER = 1.5f;
 
     private final User32 user32;
     private final WinDef.HWND windowHandle;
@@ -29,7 +30,6 @@ public class GameCommander {
 
     public void sendClick() {
         if (isTargetWindowActive()) {
-            System.out.println("Clicking");
             sendEvent(createMouseEvent(MOUSEEVENTF_LEFTDOWN, 0, 0));
             ForkJoinPool.commonPool().execute(() -> sendEvent(createMouseEvent(MOUSEEVENTF_LEFTUP, 0, 0)));
         }
@@ -37,8 +37,7 @@ public class GameCommander {
 
     public void moveCursor(int deltaX, int deltaY) {
         if (isTargetWindowActive()) {
-            System.out.println("Moving cursor, delta x: " + deltaX + "; delta y: " + deltaY);
-            sendEvent(createMouseEvent(MOUSEEVENTF_MOVE, deltaX, deltaY));
+            sendEvent(createMouseEvent(MOUSEEVENTF_MOVE, Math.round(deltaX / SPEED_DUMPER), Math.round(deltaY / SPEED_DUMPER)));
         }
     }
 

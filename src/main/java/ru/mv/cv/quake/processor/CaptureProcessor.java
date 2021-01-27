@@ -9,7 +9,6 @@ import ru.mv.cv.quake.image.PointRenderer;
 import ru.mv.cv.quake.image.ScanMatcher;
 import ru.mv.cv.quake.model.EnemyData;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Random;
 import java.util.concurrent.ForkJoinPool;
@@ -59,15 +58,12 @@ public class CaptureProcessor {
         try {
             Collection<EnemyData> matches = scanMatcher.findTargets(frame);
             if (!matches.isEmpty()) {
-                Collection<Point> roughEnemyPositions = new ArrayList<>();
                 boolean enemyInTriggerBox = false;
                 Point closestEnemy = null;
                 double minDistance = Integer.MAX_VALUE;
                 for (EnemyData match : matches) {
                     // calculate enemy position
-                    var roughEnemyPosition = new Point(match.indicatorTip.x + 8, match.indicatorTip.y + TRIGGER_BOX_Y_OFFSET);
-                    // add position to enemies collection
-                    roughEnemyPositions.add(roughEnemyPosition);
+                    var roughEnemyPosition = new Point(match.outline.x + match.outline.width / 2f, match.outline.y + match.outline.height / 2f);
                     // can fire?
                     enemyInTriggerBox |= roughEnemyPosition.inside(triggerBox);
                     // calculate distance to the center of the screen
@@ -89,7 +85,6 @@ public class CaptureProcessor {
                     int moveX = Math.min((int) deltaX, MAX_MOUSE_MOVEMENT);
                     int moveY = Math.min((int) deltaY, MAX_MOUSE_MOVEMENT);
                     gameCommander.moveCursor(moveX, moveY);
-                    //gameCommander.sendClick();
                 }
             }
             if (needsRender()) {

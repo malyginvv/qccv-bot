@@ -149,50 +149,10 @@ public class ScanMatcher {
             return new Rect(x - ENEMY_DEFAULT_HALF_WIDTH, (int) start.y, ENEMY_DEFAULT_HALF_WIDTH * 2, MAX_DISTANCE_TO_OUTLINE);
         }
         int colorEndY = y;
-        boolean hit = false;
         // move down until we hit outline or travel farther than allowed
-        while (y < yLimit) {
-            if (colorMatch(hsv, x, y, buffer)) {
-                hit = true;
-                break;
-            }
+        while (y < yLimit && !colorMatch(hsv, x, y, buffer)) {
             y++;
         }
-
-        if (hit) {
-            int filled = 0;
-            int fromY = y + 2;
-            int minY = y;
-            int maxY = y;
-            int minX = x;
-            int maxX = x;
-            // use flood fill to find outline
-            Queue<Point> points = new ArrayDeque<>(MAX_ENEMY_FLOOD_FILL_PIXELS);
-            points.add(new Point(x, y + 2));
-            while (!points.isEmpty() && filled <= MAX_ENEMY_FLOOD_FILL_PIXELS) {
-                var point = points.poll();
-                if (!colorMatch(hsv, (int) point.x, (int) point.y, buffer)) {
-                    filled++;
-                    minY = Math.min(minY, (int) point.y);
-                    maxY = Math.max(maxY, (int) point.y);
-                    minX = Math.min(minX, (int) point.x);
-                    maxX = Math.max(maxX, (int) point.x);
-                    if (point.x < start.x + MAX_ENEMY_FLOOD_FILL_OFFSET) {
-                        points.offer(new Point(point.x + 1, point.y));
-                    }
-                    if (point.x > start.x - MAX_ENEMY_FLOOD_FILL_OFFSET) {
-                        points.offer(new Point(point.x - 1, point.y));
-                    }
-                    if (point.y < fromY + MAX_ENEMY_FLOOD_FILL_OFFSET) {
-                        points.offer(new Point(point.x, point.y + 1));
-                    }
-                    if (point.y > fromY - MAX_ENEMY_FLOOD_FILL_OFFSET) {
-                        points.offer(new Point(point.x, point.y - 1));
-                    }
-                }
-            }
-            return new Rect(minX, minY, maxX - minX, maxY - minY);
-        }
-        return new Rect(x - ENEMY_DEFAULT_HALF_WIDTH, colorEndY, ENEMY_DEFAULT_HALF_WIDTH * 2, MAX_DISTANCE_TO_OUTLINE);
+        return new Rect(x - ENEMY_DEFAULT_HALF_WIDTH, y == yLimit ? colorEndY : y, ENEMY_DEFAULT_HALF_WIDTH * 2, MAX_DISTANCE_TO_OUTLINE);
     }
 }

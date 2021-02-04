@@ -4,11 +4,14 @@ import com.sun.jna.platform.win32.BaseTSD;
 import com.sun.jna.platform.win32.User32;
 import com.sun.jna.platform.win32.WinDef;
 import com.sun.jna.platform.win32.WinUser;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.concurrent.ForkJoinPool;
 
 public class GameCommander {
 
+    private static final Logger LOGGER = LogManager.getLogger();
     private static final String CLASS_NAME = "Lovecraft";
     private static final String WINDOW_NAME = "Quake Champions CLIENT 0.1.DEV.51552/53841";
 
@@ -63,7 +66,7 @@ public class GameCommander {
         try {
             user32.SendInput(new WinDef.DWORD(1), new WinUser.INPUT[]{input}, input.size());
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e);
         }
     }
 }

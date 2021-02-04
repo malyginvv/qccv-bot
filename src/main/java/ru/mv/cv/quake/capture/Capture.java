@@ -1,11 +1,15 @@
 package ru.mv.cv.quake.capture;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opencv.core.Mat;
-import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.Videoio;
+import ru.mv.cv.quake.model.FrameData;
 
 public class Capture {
+
+    private static final Logger LOGGER = LogManager.getLogger();
 
     public static final int FRAME_WIDTH = 1280;
     public static final int FRAME_HEIGHT = 720;
@@ -17,40 +21,47 @@ public class Capture {
     }
 
     public boolean open(int cameraId) {
-        videoCapture.open(cameraId);
-        videoCapture.set(Videoio.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
-        videoCapture.set(Videoio.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
-        return videoCapture.isOpened();
+        try {
+            videoCapture.open(cameraId);
+            videoCapture.set(Videoio.CAP_PROP_FRAME_WIDTH, FRAME_WIDTH);
+            videoCapture.set(Videoio.CAP_PROP_FRAME_HEIGHT, FRAME_HEIGHT);
+            return videoCapture.isOpened();
+        } catch (Exception e) {
+            LOGGER.error("Error opening the camera", e);
+        }
+        return false;
     }
 
     /**
      * Get a frame from the opened video stream (if any).
      *
-     * @return grabbed frame or {@code null} if stream is not opened
+     * @return grabbed frame or {@code null} if the stream is not opened or an error occurred
      */
-    public Mat grabFrame() {
+    public FrameData grabFrame() {
         if (!videoCapture.isOpened()) {
             return null;
         }
-        Mat frame = new Mat();
+
+        FrameData frameData = null;
         try {
-            // read the current frame
             Mat currentFrame = new Mat();
             videoCapture.read(currentFrame);
-            // if the frame is not empty, process it
             if (!currentFrame.empty()) {
-                Imgproc.cvtColor(currentFrame, frame, Imgproc.COLOR_BGR2BGRA);
+                frameData = new FrameData(currentFrame);
             }
         } catch (Exception e) {
-            // log the error
-            System.out.println("Exception during the image elaboration: " + e);
+            LOGGER.error("Error capturing a frame from the stream", e);
         }
-        return frame;
+        return frameData;
     }
 
     public void release() {
-        if (videoCapture.isOpened()) {
-            videoCapture.release();
+        try {
+            if (videoCapture.isOpened()) {
+                videoCapture.release();
+            }
+        } catch (Exception e) {
+            LOGGER.error("Error releasing the camera", e);
         }
     }
 }

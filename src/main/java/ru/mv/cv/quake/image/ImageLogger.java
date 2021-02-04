@@ -11,12 +11,11 @@ public class ImageLogger {
 
     private static final long PERIOD = 500;
 
-    private final ScheduledExecutorService scheduledExecutorService;
     private final ConcurrentLinkedQueue<FrameData> queue;
     private final ImageSaver imageSaver;
 
     public ImageLogger() {
-        scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
         scheduledExecutorService.scheduleAtFixedRate(this::processData, 0, PERIOD, TimeUnit.MILLISECONDS);
         queue = new ConcurrentLinkedQueue<>();
         imageSaver = new ImageSaver();
@@ -29,7 +28,7 @@ public class ImageLogger {
     private void processData() {
         var frameData = queue.poll();
         if (frameData != null) {
-            imageSaver.save(frameData.getFrame(), frameData.getTemporal());
+            imageSaver.save(frameData.rgb, frameData.temporal);
         }
     }
 }

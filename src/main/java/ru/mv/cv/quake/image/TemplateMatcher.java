@@ -1,5 +1,7 @@
 package ru.mv.cv.quake.image;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -11,17 +13,21 @@ import java.util.concurrent.TimeUnit;
 
 public class TemplateMatcher {
 
+    private static final Logger LOGGER = LogManager.getLogger();
+
     private Mat template;
     private Mat mask;
     private double minMatchQuality;
 
     public TemplateMatcher() {
         try {
+            //FIXME: OpenCV cannot load resources from inside the jar, we need to use awt toolkit for proper loading
+            // https://stackoverflow.com/a/2393302
             template = Imgcodecs.imread("H:\\workspace\\cv-quake\\src\\main\\resources\\pointer.png", Imgcodecs.IMREAD_COLOR);
             mask = Imgcodecs.imread("H:\\workspace\\cv-quake\\src\\main\\resources\\mask.png", Imgcodecs.IMREAD_COLOR);
             minMatchQuality = 0.9;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e);
         }
     }
 

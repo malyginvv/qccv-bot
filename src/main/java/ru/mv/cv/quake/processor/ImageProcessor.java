@@ -5,6 +5,7 @@ import org.opencv.imgproc.Imgproc;
 import ru.mv.cv.quake.image.PointRenderer;
 import ru.mv.cv.quake.image.ScanMatcher;
 import ru.mv.cv.quake.image.TemplateMatcher;
+import ru.mv.cv.quake.model.FrameData;
 import ru.mv.cv.quake.model.PixelData;
 
 public class ImageProcessor {
@@ -20,8 +21,7 @@ public class ImageProcessor {
     }
 
     public Mat process(Mat frame) {
-        //var match = templateMatcher.findMatch(frame);
-        var matches = scanMatcher.findTargets(frame);
+        var matches = scanMatcher.findEnemies(new FrameData(frame));
         return pointRenderer.render(frame, matches);
     }
 

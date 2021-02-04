@@ -18,8 +18,18 @@ public class App extends Application {
     private static final String MODE_VIEWER = "viewer";
 
     public static void main(String[] args) {
-        OpenCV.loadLocally();
+        initLogger();
+        initOpenCV();
         launch(args);
+    }
+
+    private static void initLogger() {
+        // make all loggers async
+        System.setProperty("log4j2.contextSelector", "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
+    }
+
+    private static void initOpenCV() {
+        OpenCV.loadLocally();
     }
 
     @Override
@@ -37,7 +47,7 @@ public class App extends Application {
         StageAndShutdownAware controller = fxmlLoader.getController();
 
         var scene = new Scene(parent);
-        primaryStage.setTitle("Quake Champions Computer Vision Project");
+        primaryStage.setTitle("Quake Champions Computer Vision Bot");
         primaryStage.setScene(scene);
         primaryStage.setOnHidden(windowEvent -> {
             controller.shutdown();

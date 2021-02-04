@@ -44,8 +44,6 @@ public class ImageViewerController extends AbstractController {
     private final ImageConverter imageConverter = new ImageConverter();
     private File current;
     private Mat currentMat;
-    private Mat currentProcessed;
-    private Image currentImage;
 
     @FXML
     public void initialize() {
@@ -60,7 +58,7 @@ public class ImageViewerController extends AbstractController {
     @FXML
     public void openDir(ActionEvent event) {
         var directoryChooser = new DirectoryChooser();
-        directoryChooser.setTitle("Select a directory with Quake Champions screenshots");
+        directoryChooser.setTitle("Select a directory containing Quake Champions screenshots");
         directoryChooser.setInitialDirectory(new File("H:\\workspace\\cv-quake-img\\training\\positive\\img"));
         var file = directoryChooser.showDialog(stage);
         if (file != null) {
@@ -104,8 +102,8 @@ public class ImageViewerController extends AbstractController {
     }
 
     private void processAndUpdateImage() {
-        currentProcessed = imageProcessor.process(currentMat);
-        currentImage = imageConverter.convert(currentProcessed);
+        Mat currentProcessed = imageProcessor.process(currentMat);
+        Image currentImage = imageConverter.convert(currentProcessed);
         imageView.setImage(currentImage);
     }
 

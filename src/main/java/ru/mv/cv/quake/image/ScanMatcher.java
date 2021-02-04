@@ -4,9 +4,9 @@ import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
-import org.opencv.imgproc.Imgproc;
 import ru.mv.cv.quake.capture.Capture;
 import ru.mv.cv.quake.model.EnemyData;
+import ru.mv.cv.quake.model.FrameData;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -22,7 +22,7 @@ public class ScanMatcher {
     private static final int START_COL = 20;
     private static final int END_COL = Capture.FRAME_WIDTH - START_COL;
 
-    // for 8 channel matrix, the value H is halved
+    // for 8 channel matrix, the value of Hue is halved
     private static final int TARGET_HUE = 300;
     private static final int TARGET_HUE_RANGE = 3;
     private static final int MIN_HUE = TARGET_HUE - TARGET_HUE_RANGE;
@@ -41,31 +41,30 @@ public class ScanMatcher {
     private static final int FLOOD_FILL_TRIGGER = 36;
     private static final int MAX_FLOOD_FILL_OFFSET = 14;
     private static final int MAX_DISTANCE_TO_OUTLINE = 35;
-    private static final int MAX_ENEMY_FLOOD_FILL_PIXELS = 120;
-    private static final int MAX_ENEMY_FLOOD_FILL_OFFSET = 40;
     private static final int ENEMY_DEFAULT_HALF_WIDTH = 8;
 
-    public Collection<EnemyData> findTargets(Mat frame) {
-        var start = System.nanoTime();
-
-        Mat rgb = new Mat();
-        Imgproc.cvtColor(frame, rgb, Imgproc.COLOR_BGRA2RGB);
-        Mat hsv = new Mat();
-        Imgproc.cvtColor(rgb, hsv, Imgproc.COLOR_RGB2HSV);
-        var cols = Math.min(hsv.cols(), END_COL);
-        var rows = Math.min(hsv.rows(), END_ROW);
-        var type = hsv.type();
+    public Collection<EnemyData> findEnemies(FrameData frameData) {
+        var cols = Math.min(frameData.hsv.cols(), END_COL);
+        var rows = Math.min(frameData.hsv.rows(), END_ROW);
+        var type = frameData.hsv.type();
         var channels = new byte[CvType.channels(type)];
-        Collection<EnemyData> points = new ArrayList<>();
+
+        Collection<EnemyData> enemyDataCollection = new ArrayList<>();
+        // the idea is simple: every enemy on screen in QC has a tip over its head, it looks like an inverted triangle
+        // so we try to find these tips and enemy contours beneath them
+        // check every nth pixel, when match is found skip some rows and columns
+        // sometimes we can accidentally skip an enemy if it's too close to another enemy but that's ok
+        // worst case: we check (Capture.FRAME_HEIGHT - START_ROW * Capture.FRAME_WIDTH - START_COL) / (ROW_INCREMENT * COL_INCREMENT) pixels
+        // which is by default (700 * 1260) / (3 * 3) = 98000 pixels, shouldn't take more than 10 ms
         int x = START_COL;
         while (x < cols) {
             EnemyData enemyData = null;
             int y = START_ROW;
             while (y < rows) {
-                if (colorMatch(hsv, x, y, channels)) {
-                    enemyData = findMatch(hsv, y, x, channels);
+                if (colorMatch(frameData.hsv, x, y, channels)) {
+                    enemyData = findMatch(frameData.hsv, y, x, channels);
                     if (enemyData != null) {
-                        points.add(enemyData);
+                        enemyDataCollection.add(enemyData);
                         y += ROW_SKIP_AFTER_MATCH;
                     }
                 }
@@ -77,13 +76,13 @@ public class ScanMatcher {
             x += COL_INCREMENT;
         }
 
-        return points;
+        return enemyDataCollection;
     }
 
     private boolean colorMatch(Mat hsv, int x, int y, byte[] buffer) {
         hsv.get(y, x, buffer);
         var h = buffer[0] & BYTE_CONVERTER;
-        int hue = h * 2;
+        int hue = h * 2; // the value of Hue is halved
         int saturation = buffer[1] & BYTE_CONVERTER;
         int value = buffer[2] & BYTE_CONVERTER;
         return hue >= MIN_HUE && hue <= MAX_HUE && saturation >= MIN_SATURATION && value >= MIN_VALUE;
@@ -123,7 +122,7 @@ public class ScanMatcher {
                 maxY = Math.max(maxY, (int) point.y);
                 minX = Math.min(minX, (int) point.x);
                 maxX = Math.max(maxX, (int) point.x);
-                // try to flood only while moving forward
+                // try to flood while moving forward (right or down)
                 if (point.x < fromX + MAX_FLOOD_FILL_OFFSET) {
                     points.offer(new Point(point.x + 1, point.y));
                 }

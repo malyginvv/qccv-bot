@@ -11,8 +11,10 @@ import java.util.Collection;
 public class GameState {
 
     public final Collection<EnemyData> enemyData;
+    public final DebugData debugData;
 
-    public GameState(Collection<EnemyData> enemyData) {
+    public GameState(Collection<EnemyData> enemyData, DebugData debugData) {
         this.enemyData = enemyData;
+        this.debugData = debugData;
     }
 }

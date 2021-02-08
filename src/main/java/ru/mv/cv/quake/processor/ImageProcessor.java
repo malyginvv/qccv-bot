@@ -2,9 +2,10 @@ package ru.mv.cv.quake.processor;
 
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
-import ru.mv.cv.quake.image.PointRenderer;
+import ru.mv.cv.quake.image.EnemyRenderer;
 import ru.mv.cv.quake.image.ScanMatcher;
 import ru.mv.cv.quake.image.TemplateMatcher;
+import ru.mv.cv.quake.model.DebugData;
 import ru.mv.cv.quake.model.FrameData;
 import ru.mv.cv.quake.model.PixelData;
 
@@ -12,17 +13,18 @@ public class ImageProcessor {
 
     private final TemplateMatcher templateMatcher;
     private final ScanMatcher scanMatcher;
-    private final PointRenderer pointRenderer;
+    private final EnemyRenderer enemyRenderer;
 
     public ImageProcessor() {
         this.templateMatcher = new TemplateMatcher();
         this.scanMatcher = new ScanMatcher();
-        this.pointRenderer = new PointRenderer();
+        this.enemyRenderer = new EnemyRenderer();
     }
 
     public Mat process(Mat frame) {
-        var matches = scanMatcher.findEnemies(new FrameData(frame));
-        return pointRenderer.render(frame, matches);
+        DebugData debugData = new DebugData();
+        var matches = scanMatcher.findEnemies(new FrameData(frame), debugData);
+        return enemyRenderer.render(frame, matches, debugData);
     }
 
     public void setMatchQuality(double matchQuality) {

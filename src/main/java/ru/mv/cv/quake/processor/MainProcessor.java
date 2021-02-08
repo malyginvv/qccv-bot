@@ -6,7 +6,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import ru.mv.cv.quake.capture.Capture;
-import ru.mv.cv.quake.image.PointRenderer;
+import ru.mv.cv.quake.image.EnemyRenderer;
 import ru.mv.cv.quake.model.EnemyData;
 import ru.mv.cv.quake.model.GameState;
 
@@ -25,7 +25,7 @@ public class MainProcessor {
     private final Capture capture;
     private final StateRecognizer stateRecognizer;
     private final AtomicReference<Mat> renderReference;
-    private final PointRenderer pointRenderer;
+    private final EnemyRenderer enemyRenderer;
     private final GameCommander gameCommander;
     private final Rect triggerBox;
 
@@ -33,7 +33,7 @@ public class MainProcessor {
         this.capture = capture;
         this.stateRecognizer = new StateRecognizer();
         this.renderReference = renderReference;
-        this.pointRenderer = new PointRenderer();
+        this.enemyRenderer = new EnemyRenderer();
         this.gameCommander = new GameCommander();
         this.triggerBox = new Rect(SCREEN_CENTER_X - TRIGGER_BOX_WIDTH / 2, SCREEN_CENTER_Y - TRIGGER_BOX_HEIGHT / 2,
                 TRIGGER_BOX_WIDTH, TRIGGER_BOX_HEIGHT);
@@ -80,7 +80,7 @@ public class MainProcessor {
             }
 
             ForkJoinPool.commonPool().execute(() -> {
-                var frameToRender = pointRenderer.render(frameData.frame, gameState.enemyData);
+                var frameToRender = enemyRenderer.render(frameData.frame, gameState);
                 renderReference.set(frameToRender);
             });
         } catch (Exception e) {

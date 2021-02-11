@@ -9,12 +9,7 @@ import ru.mv.cv.quake.model.DebugData;
 import ru.mv.cv.quake.model.EnemyData;
 import ru.mv.cv.quake.model.FrameData;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 
 public class ScanMatcher {
 
@@ -51,8 +46,10 @@ public class ScanMatcher {
     private static final int FLOOD_FILL_TRIGGER = 26;
     private static final int MAX_FLOOD_FILL_OFFSET_X = 10;
     private static final int MAX_FLOOD_FILL_OFFSET_Y = 14;
+    private static final int MAX_MATCHING_DISTANCE = 3;
     private static final int MAX_DISTANCE_TO_OUTLINE = 35;
-    private static final int ENEMY_DEFAULT_HALF_WIDTH = 8;
+    private static final int ENEMY_DEFAULT_HALF_WIDTH = 16;
+    private static final int ENEMY_DEFAULT_HEIGHT = 40;
     private static final int OUTLINE_THICKNESS = 3;
 
     public Collection<EnemyData> findEnemies(FrameData frameData, DebugData debugData) {
@@ -124,7 +121,10 @@ public class ScanMatcher {
         var tip = findTipUsingFloodFill(hsv, x, y, buffer, debugData);
         if (tip != null) {
             var startOfEnemyOutline = findStartOfEnemyOutline(hsv, tip, buffer, debugData);
-            var enemyOutline = findEnemyOutline(hsv, startOfEnemyOutline, buffer, debugData);
+            var enemyOutline = new Rect((int) startOfEnemyOutline.x - ENEMY_DEFAULT_HALF_WIDTH,
+                    (int) startOfEnemyOutline.y,
+                    ENEMY_DEFAULT_HALF_WIDTH * 2,
+                    ENEMY_DEFAULT_HEIGHT);
             return new EnemyData(tip, enemyOutline);
         }
         return null;
@@ -167,16 +167,17 @@ public class ScanMatcher {
     private Point findStartOfEnemyOutline(Mat hsv, Point start, byte[] buffer, DebugData debugData) {
         int x = (int) start.x;
         int y = (int) start.y;
-        var yLimit = start.y + MAX_DISTANCE_TO_OUTLINE;
+        var maxDistance = y + MAX_MATCHING_DISTANCE;
         // move down while color matches
-        while (y < yLimit && outlineColorMatches(hsv, x, y, buffer)) {
+        while (y < maxDistance && outlineColorMatches(hsv, x, y, buffer)) {
             y++;
             debugData.addPoint(x, y);
         }
-        if (y == yLimit) {
+        if (y == maxDistance) {
             // tall column of matching pixels, outline probably started at the top
             return start;
         }
+        var yLimit = y + MAX_DISTANCE_TO_OUTLINE;
         // move down until we hit an outline or travel farther than allowed
         while (y < yLimit && !outlineColorMatches(hsv, x, y, buffer)) {
             y++;
@@ -190,6 +191,17 @@ public class ScanMatcher {
     }
 
     private Rect findEnemyOutline(Mat hsv, Point start, byte[] buffer, DebugData debugData) {
+        int startX = (int) start.x;
+        int startY = (int) start.y + OUTLINE_THICKNESS;
+        var endOfEnemyOutline = findOutline(hsv, startX, startY, buffer, 0, 1, debugData);
+        var endY = (int) endOfEnemyOutline.y;
+        int middle = (startY + endY) / 2;
+        var right = findOutline(hsv, startX, middle, buffer, 1, 0, debugData);
+        var left = findOutline(hsv, startX, middle, buffer, -1, 0, debugData);
+        return new Rect((int) left.x, endY, (int) right.x - (int) left.x, endY - startY);
+    }
+
+    private Rect findEnemyOutlineByRayCasting(Mat hsv, Point start, byte[] buffer, DebugData debugData) {
         int startX = (int) start.x;
         int startY = (int) start.y + OUTLINE_THICKNESS;
         // (startX, startY) are coordinates of a point inside of the enemy outline
